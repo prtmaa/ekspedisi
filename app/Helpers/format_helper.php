@@ -17,3 +17,10 @@ if (! function_exists('formatTanggalIndo')) {
         return Carbon::parse($tanggal)->translatedFormat('d F Y');
     }
 }
+
+if (! function_exists('formatRupiahDesimal')) {
+    function formatRupiahDesimal($angka)
+    {
+        return 'Rp ' . number_format((float) $angka, 2, ',', '.');
+    }
+}

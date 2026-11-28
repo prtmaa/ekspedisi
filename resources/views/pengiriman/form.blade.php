@@ -99,6 +99,20 @@
                         </div>
 
                         <div class="form-group row">
+                            <label for="titik" class="col-md-4 col-md-offset-1 control-label">Tambah Titik</label>
+                            <div class="col-md 6">
+                                <input type="text" name="titik" id="titik" class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
+                            <label class="col-md-4 col-md-offset-1 control-label">Total</label>
+                            <div class="col-md 6">
+                                <input type="text" id="total" class="form-control" readonly>
+                            </div>
+                        </div>
+
+                        <div class="form-group row">
                             <label for="bs" class="col-md-4 col-md-offset-1 control-label">Bon Sementara</label>
                             <div class="col-md 6">
                                 <input type="text" name="bs" id="bs" class="form-control" required

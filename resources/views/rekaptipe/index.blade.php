@@ -1,7 +1,7 @@
 @extends('layouts.master')
 
 @section('tittle')
-    Data Pengeluaran (Per Tipe)
+    Rekap Per Ekspedisi
 @endsection
 
 @section('breadcrumb')
@@ -55,7 +55,7 @@
                                         <tbody></tbody>
                                         <tfoot>
                                             <tr>
-                                                <th colspan="2" class="text-end">Total Keseluruhan:</th>
+                                                <th colspan="2" class="text-end">Total Keseluruhan Sebelum Pajak:</th>
                                                 <th id="total-sewa"></th>
                                                 <th id="total-pengeluaran"></th>
                                                 <th id="total-pendapatan"></th>
@@ -65,6 +65,36 @@
                                 </div>
                             </div>
 
+                        </div>
+
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Pendapatan Setelah Pajak</h3>
+                            </div>
+                            <div class="card-body table-responsive p-0">
+                                <table class="table table-bordered mb-0">
+                                    <tbody>
+                                        <tr>
+                                            <td>DPP <small class="text-muted">(Total Sewa ÷ 1,11)</small></td>
+                                            <td class="text-right text-end" id="est-dpp"></td>
+                                        </tr>
+                                        <tr>
+                                            <td>PPN <small class="text-muted">(DPP × 11%)</small></td>
+                                            <td class="text-right text-end" id="est-ppn"></td>
+                                        </tr>
+                                        <tr>
+                                            <td>PPH <small class="text-muted">(DPP × 2%)</small></td>
+                                            <td class="text-right text-end" id="est-pph"></td>
+                                        </tr>
+                                        <tr class="font-weight-bold fw-bold">
+                                            <td>Total Pendapatan Bersih
+                                                <small class="text-muted">(Total Sewa − PPN − PPH − Pengeluaran)</small>
+                                            </td>
+                                            <td class="text-right text-end" id="est-bersih"></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
 
                         <div class="card">
@@ -93,6 +123,14 @@
         function formatRupiah(angka) {
             angka = Number(angka) || 0;
             return 'Rp ' + angka.toLocaleString('id-ID');
+        }
+
+        function formatRupiahDesimal(angka) {
+            angka = Number(angka) || 0;
+            return 'Rp ' + angka.toLocaleString('id-ID', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
         }
 
         $(function() {
@@ -158,14 +196,28 @@
                         totalPengeluaran = 0,
                         totalPendapatan = 0;
                     data.forEach(function(item) {
-                        totalSewa += parseInt(item.sewa || 0);
-                        totalPengeluaran += parseInt(item.pengeluaran || 0);
-                        totalPendapatan += parseInt(item.pendapatan || 0);
+                        totalSewa += parseFloat(item.sewa || 0);
+                        totalPengeluaran += parseFloat(item.pengeluaran || 0);
+                        totalPendapatan += parseFloat(item.pendapatan || 0);
                     });
 
-                    $('#total-sewa').html(formatRupiah(totalSewa));
-                    $('#total-pengeluaran').html(formatRupiah(totalPengeluaran));
-                    $('#total-pendapatan').html(formatRupiah(totalPendapatan));
+                    $('#total-sewa').html(formatRupiahDesimal(totalSewa));
+                    $('#total-pengeluaran').html(formatRupiahDesimal(totalPengeluaran));
+                    $('#total-pendapatan').html(formatRupiahDesimal(totalPendapatan));
+
+                    // Estimasi pendapatan setelah pajak
+                    // Total pendapatan = sewa + tambah titik = totalSewa
+                    const dpp = totalSewa / 1.11;
+                    const ppn = dpp * 0.11;
+                    const pph = dpp * 0.02;
+                    const bersih = totalSewa - ppn - pph - totalPengeluaran;
+
+                    $('#est-dpp').text(formatRupiahDesimal(dpp));
+                    $('#est-ppn').text(formatRupiahDesimal(ppn));
+                    $('#est-pph').text(formatRupiahDesimal(pph));
+                    $('#est-bersih')
+                        .text(formatRupiahDesimal(bersih))
+                        .toggleClass('text-danger', bersih < 0);
                 }
 
             });

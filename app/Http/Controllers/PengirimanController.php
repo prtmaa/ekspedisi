@@ -47,6 +47,9 @@ class PengirimanController extends Controller
             ->addColumn('sewa', function ($row) {
                 return formatRupiah($row->sewa);
             })
+            ->addColumn('titik', function ($row) {
+                return formatRupiah($row->titik);
+            })
             ->addColumn('bon_sementara', function ($row) {
                 return formatRupiah($row->bon_sementara);
             })
@@ -92,6 +95,7 @@ class PengirimanController extends Controller
         $pengiriman = new Pengiriman();
         $bs = preg_replace('/\D/', '', $request->bs);
         $sewa = preg_replace('/\D/', '', $request->sewa);
+        $titik = preg_replace('/\D/', '', $request->titik);
 
 
         $pengiriman->tanggal = $request->tanggal;
@@ -101,6 +105,7 @@ class PengirimanController extends Controller
         $pengiriman->driver_id = $request->driver_id;
         $pengiriman->bon_sementara = $bs;
         $pengiriman->sewa = $sewa;
+        $pengiriman->titik = $titik;
 
         $pengiriman->save();
 
@@ -127,6 +132,7 @@ class PengirimanController extends Controller
         $pengiriman = Pengiriman::find($id);
         $bs = preg_replace('/\D/', '', $request->bs);
         $sewa = preg_replace('/\D/', '', $request->sewa);
+        $titik = preg_replace('/\D/', '', $request->titik);
 
         $pengiriman->tanggal = $request->tanggal;
         $pengiriman->tipe_pengiriman = $request->tipe;
@@ -135,6 +141,7 @@ class PengirimanController extends Controller
         $pengiriman->driver_id = $request->driver_id;
         $pengiriman->bon_sementara = $bs;
         $pengiriman->sewa = $sewa;
+        $pengiriman->titik = $titik;
         $pengiriman->update();
 
         return response()->json('Data berhasil disimpan', 200);
@@ -188,14 +195,35 @@ class PengirimanController extends Controller
         $sheet->setCellValue('D13', ': ' . $pengiriman->driver->nama);
 
         $sheet->setCellValue('D15', ': Rp. ' . number_format($pengiriman->bon_sementara));
-        $sheet->setCellValue('F20', 'Rp. ' . number_format($pengiriman->bon_sementara));
+        $sheet->setCellValue('F21', 'Rp. ' . number_format($pengiriman->bon_sementara));
+
+        /* === Sewa, Tambah Titik, Total (baris 17-19, sesuai label template) === */
+        $sewa  = (float) $pengiriman->sewa;
+        $titik = (float) $pengiriman->titik;
+
+        $sheet->setCellValue('D17', ': Rp. ' . number_format($sewa));
+        $sheet->setCellValue('D18', $titik > 0 ? ': Rp. ' . number_format($titik) : '');
+        $sheet->setCellValue('D19', ': Rp. ' . number_format($sewa + $titik));
+
+        // Label C18 dikosongkan kalau tidak ada tambah titik
+        if ($titik <= 0) {
+            $sheet->setCellValue('C18', '');
+        }
+
+        // Bold, sama seperti D11-D15
+        $sheet->getStyle('D17:D19')->getFont()->setBold(true);
+
+        // Label di C17:C19 terpotong karena kolom C sempit, jadi dilebarkan
+        // (B dikurangi sebanyak itu supaya lebar halaman cetak tetap sama)
+        $sheet->getColumnDimension('B')->setWidth(73);
+        $sheet->getColumnDimension('C')->setWidth(21.6);
 
         /* === Tulis Data Pengeluaran === */
         $row = 25;
         $no = 1;
 
         foreach ($pengiriman->pengeluaran as $pengeluaran) {
-            if ($row > 46) break;
+            if ($row > 49) break;
 
             $namaJenis = $pengeluaran->jenisPengeluaran->nama ?? '-';
 
@@ -207,11 +235,20 @@ class PengirimanController extends Controller
         }
 
         $total = $pengiriman->pengeluaran->sum('nominal');
-        $sheet->setCellValue('F49', 'Rp. ' . number_format($total));
+        $sheet->setCellValue('F50', 'Rp. ' . number_format($total));
 
         $selisih = $pengiriman->bon_sementara - $total;
-        $sheet->setCellValue('F52', 'Rp. ' . number_format($selisih));
+        $sheet->setCellValue('F53', 'Rp. ' . number_format($selisih));
 
+        // Warna merah jika minus
+        $sheet->getStyle('F53')->applyFromArray([
+            'font' => [
+                'bold'  => true,
+                'color' => ['rgb' => $selisih < 0 ? 'FF0000' : '000000'],
+            ],
+        ]);
+
+        $sheet->setCellValue('B66', 'Wonogiri, ' . formatTanggalIndo($pengiriman->tanggal));
         // Warna merah jika minus
         $styleArray = [
             'font' => [

@@ -26,7 +26,7 @@ class RekaptipeController extends Controller
 
         // Subquery: total sewa per tipe (langsung dari tabel pengiriman)
         $subSewa = DB::table('pengiriman')
-            ->select('tipe_pengiriman', DB::raw('SUM(sewa) as total_sewa'))
+            ->select('tipe_pengiriman', DB::raw('SUM(sewa + COALESCE(titik, 0)) as total_sewa'))
             ->when($startDate && $endDate, function ($q) use ($startDate, $endDate) {
                 $q->whereBetween('tanggal', [$startDate, $endDate]);
             })
@@ -121,9 +121,9 @@ class RekaptipeController extends Controller
         $startDate = $request->input('start_date');
         $endDate   = $request->input('end_date');
 
-        // === Subquery total sewa per tipe (tanpa join tujuan) ===
+   // === Subquery total sewa per tipe (tanpa join tujuan) ===
         $subSewa = DB::table('pengiriman')
-            ->select('tipe_pengiriman', DB::raw('SUM(sewa) as total_sewa'))
+            ->select('tipe_pengiriman', DB::raw('SUM(sewa + COALESCE(titik, 0)) as total_sewa'))
             ->when(
                 $startDate && $endDate,
                 fn($q) =>
@@ -197,20 +197,42 @@ class RekaptipeController extends Controller
             $row++;
         }
 
-        // === TOTAL di baris 27 ===
-        $sheet->setCellValue("B27", "TOTAL");
-
+        // === TOTAL KESELURUHAN (baris 27, label sudah ada di template A27) ===
         $sheet->setCellValue("C27", $totalSewa);
-        $sheet->getStyle("C27")->getNumberFormat()->setFormatCode('"Rp." #,##0');
-
         $sheet->setCellValue("D27", $totalPengeluaran);
-        $sheet->getStyle("D27")->getNumberFormat()->setFormatCode('"Rp." #,##0');
-
         $sheet->setCellValue("E27", $totalPendapatan);
-        $sheet->getStyle("E27")->getNumberFormat()->setFormatCode('"Rp." #,##0');
 
-        $sheet->getStyle("B27:E27")->getFont()->setBold(true);
+        foreach (['C27', 'D27', 'E27'] as $cell) {
+            $sheet->getStyle($cell)->getNumberFormat()->setFormatCode('"Rp." #,##0.00');
+            $sheet->getStyle($cell)->getFont()->setBold(true);
+        }
 
+        // === ESTIMASI PENDAPATAN SETELAH PAJAK (baris 32-35, di dalam kotak template) ===
+        // Total pendapatan = sewa + tambah titik = $totalSewa
+        $dpp = $totalSewa / 1.11;
+        $ppn = $dpp * 0.11;
+        $pph = $dpp * 0.02;
+        $pendapatanBersih = $totalSewa - $ppn - $pph - $totalPengeluaran;
+
+        $rows = [
+            32 => ['DPP',                     $dpp],
+            33 => ['PPN (11%)',               $ppn],
+            34 => ['PPH (2%)',                $pph],
+            35 => ['Total Pendapatan Bersih', $pendapatanBersih],
+        ];
+
+        foreach ($rows as $r => [$label, $nilai]) {
+            $sheet->setCellValue("B{$r}", $label);
+            $sheet->setCellValue("C{$r}", $nilai);
+            $sheet->getStyle("C{$r}")->getNumberFormat()->setFormatCode('"Rp." #,##0.00');
+        }
+
+        // Baris hasil akhir dibuat bold, merah kalau minus
+        $sheet->getStyle('B35:C35')->getFont()->setBold(true);
+        if ($pendapatanBersih < 0) {
+            $sheet->getStyle('C35')->getFont()->getColor()->setRGB('FF0000');
+        }
+        
         // Judul Periode
         $sheet->setCellValue(
             "A8",

@@ -55,6 +55,16 @@
                                                 <td>{{ formatRupiah($pengiriman->sewa) }}</td>
                                             </tr>
                                             <tr>
+                                                <td>Tambah Titik Tujuan</td>
+                                                <td>:</td>
+                                                <td>{{ formatRupiah($pengiriman->titik) }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Total</td>
+                                                <td>:</td>
+                                                <td>{{ formatRupiah($pengiriman->sewa + $pengiriman->titik) }}</td>
+                                            </tr>
+                                            <tr>
                                                 <td>Bon Sementara</td>
                                                 <td>:</td>
                                                 <td>{{ formatRupiah($pengiriman->bon_sementara) }}</td>

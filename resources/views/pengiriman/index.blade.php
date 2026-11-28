@@ -53,6 +53,7 @@
                                             <th>Tujuan</th>
                                             <th>Muatan</th>
                                             <th>Sewa</th>
+                                            <th>Tambah Titik</th>
                                             <th>Bon Sementara</th>
                                             <th>Pengeluaran</th>
                                             <th>Sisa</th>
@@ -128,6 +129,9 @@
                             data: 'sewa'
                         },
                         {
+                            data: 'titik'
+                        },
+                        {
                             data: 'bon_sementara'
                         },
                         {
@@ -189,6 +193,7 @@
                 $('#modal-form .modal-title').text('Tambah Data');
 
                 $('#modal-form form')[0].reset();
+                hitungTotal();
                 $('#modal-form form').attr('action', url);
                 $('#modal-form [name=_method]').val('post');
                 $('#modal-form [name=bs]').focus();
@@ -213,7 +218,9 @@
                         $('#modal-form [name=jenis]').val(response.jenis);
                         $('#modal-form [name=driver_id]').val(response.driver_id);
                         $('#modal-form [name=bs]').val(response.bon_sementara);
-                        $('#modal-form [name=sewa]').val(response.sewa);
+                        $('#modal-form [name=sewa]').val(formatRupiah(Math.round(response.sewa || 0)));
+                        $('#modal-form [name=titik]').val(formatRupiah(Math.round(response.titik || 0)));
+                        hitungTotal();
                     })
                     .fail((errors) => {
                         Swal.fire({
@@ -289,17 +296,33 @@
                     this.value = '';
                 }
             });
+
+            const titik = document.getElementById('titik');
+
+            titik.addEventListener('input', function(e) {
+                let value = this.value.replace(/\D/g, ''); // Hanya angka
+                if (value) {
+                    // Format angka dengan titik ribuan
+                    value = new Intl.NumberFormat('id-ID').format(value);
+                    this.value = value;
+                } else {
+                    this.value = '';
+                }
+            });
+
+            function angka(val) {
+                return parseInt(String(val).replace(/\D/g, '')) || 0;
+            }
+
+            function hitungTotal() {
+                const total = angka($('#sewa').val()) + angka($('#titik').val());
+                $('#total').val(total ? formatRupiah(total) : '');
+            }
+
+            $('#sewa, #titik').on('input', hitungTotal);
         </script>
 
         <script>
-            document.getElementById('tujuan').addEventListener('change', function() {
-                let selectedOption = this.options[this.selectedIndex];
-                let sewa = selectedOption.getAttribute('data-sewa');
-
-                // isi input sewa
-                document.getElementById('sewa').value = sewa ?? 0;
-            });
-
             function formatRupiah(angka) {
                 return new Intl.NumberFormat('id-ID').format(angka);
             }
@@ -309,6 +332,7 @@
                 let sewa = selectedOption.getAttribute('data-sewa');
 
                 document.getElementById('sewa').value = formatRupiah(sewa ?? 0);
+                hitungTotal();
             });
         </script>
         <script>
